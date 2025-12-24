@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Personal Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <div class="container" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <div class="assistant-interface"> <!-- Reuse card style -->
+            <header>
+                <h1>Nova</h1>
+                <p>Login to continue</p>
+            </header>
+
+            <div style="margin-top: 30px;">
+                <!-- 
+                     PUT YOUR GOOGLE CLIENT ID HERE 
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                -->
+                <div id="g_id_onload"
+                     data-client_id="85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="filled_black"
+                     data-text="sign_in_with"
+                     data-shape="pill"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+
+            <p id="error-msg" style="color: #ff4444; margin-top: 15px; font-size: 0.9em;"></p>
+        </div>
+    </div>
+
+    <script>
+        async function handleCredentialResponse(response) {
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.textContent = "Verifying...";
+            
+            try {
+                // Send to backend
+                const res = await fetch('http://localhost:8000/api/auth/google-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credential: response.credential })
+                });
+
+                if (!res.ok) {
+                    throw new Error("Login failed");
+                }
+
+                const data = await res.json();
+                
+                // Store token
+                localStorage.setItem('token', data.access_token);
+                localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
+
+                // Redirect
+                window.location.href = 'index.html';
+
+            } catch (err) {
+                console.error(err);
+                errorMsg.textContent = "Login Failed. Please try again.";
+            }
+        }
+    </script>
+</body>
+</html>

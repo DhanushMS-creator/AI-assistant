@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+google-cloud-speech
+google-cloud-texttospeech
+google-generativeai
+google-genai
+python-dotenv
+requests
+sqlalchemy
+python-jose[cryptography]
+google-auth
+websockets
