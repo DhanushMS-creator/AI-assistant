@@ -10,8 +10,13 @@ load_dotenv()
 
 class VoiceHandler:
     def __init__(self):
-        self.speech_client = speech.SpeechClient()
-        self.tts_client = texttospeech.TextToSpeechClient()
+        try:
+            self.speech_client = speech.SpeechClient()
+            self.tts_client = texttospeech.TextToSpeechClient()
+        except Exception as e:
+            print(f"Voice clients failed to initialize: {e}")
+            self.speech_client = None
+            self.tts_client = None
 
     async def speech_to_text(self, audio_content: bytes) -> str:
         audio = speech.RecognitionAudio(content=audio_content)
@@ -21,6 +26,8 @@ class VoiceHandler:
             language_code="en-US",
         )
 
+        if not self.speech_client:
+            return ""
         try:
             response = self.speech_client.recognize(config=config, audio=audio)
             
@@ -43,6 +50,9 @@ class VoiceHandler:
         audio_config = texttospeech.AudioConfig(
             audio_encoding=texttospeech.AudioEncoding.MP3
         )
+
+        if not self.tts_client:
+            return None
 
         try:
             response = self.tts_client.synthesize_speech(
