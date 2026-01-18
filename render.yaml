@@ -20,7 +20,7 @@ services:
   - type: web
     name: web
     runtime: static
-    region: singapore
+    # region: singapore # Static sites are global, no region allowed
     plan: free
     buildCommand: |
       cd client-react
@@ -33,10 +33,11 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: api
-          envVar: RenderServiceUrl
+        value: https://api-service-name.onrender.com # Placeholder
+        # fromService: # Cannot easily get public URL of another service in blueprint yet
+        #   type: web
+        #   name: api
+        #   envVar: RENDER_EXTERNAL_URL
     autoDeploy: true
 
 databases:
