@@ -16,12 +16,10 @@ services:
         fromDatabase:
           name: db
           property: connectionString
-    autoDeploy: true
-
-# Frontend (React)
-staticSites:
-  - name: web
-    # env: static # 'env' is implied for staticSites
+  # Frontend (React)
+  - type: web
+    name: web
+    runtime: static
     region: singapore
     plan: free
     buildCommand: |
