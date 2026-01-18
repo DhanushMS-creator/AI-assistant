@@ -7,6 +7,11 @@ const historyList = document.getElementById('history-list');
 const newChatBtn = document.getElementById('new-chat-btn');
 const profilePic = document.getElementById('profile-pic');
 
+// API Configuration
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:8000' 
+    : window.location.origin.replace(/^http/, 'http').replace(/web-/, 'api-');
+
 // Auth Check
 const token = localStorage.getItem('token');
 const user = JSON.parse(localStorage.getItem('user'));
@@ -37,7 +42,7 @@ newChatBtn.addEventListener('click', () => {
 
 async function loadHistory() {
     try {
-        const res = await fetch('http://localhost:8000/api/history', {
+        const res = await fetch(`${API_URL}/api/history`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -11,7 +13,7 @@ const Login = () => {
       setError("Verifying...");
       
       try {
-        const res = await fetch('http://localhost:8000/api/auth/google-login', {
+        const res = await fetch(`${API_URL}/api/auth/google-login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ credential: response.credential })

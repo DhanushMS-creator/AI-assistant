@@ -45,13 +45,17 @@
     </div>
 
     <script>
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:8000' 
+            : window.location.origin.replace(/^http/, 'http').replace(/web-/, 'api-');
+
         async function handleCredentialResponse(response) {
             const errorMsg = document.getElementById('error-msg');
             errorMsg.textContent = "Verifying...";
             
             try {
                 // Send to backend
-                const res = await fetch('http://localhost:8000/api/auth/google-login', {
+                const res = await fetch(`${API_URL}/api/auth/google-login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ credential: response.credential })

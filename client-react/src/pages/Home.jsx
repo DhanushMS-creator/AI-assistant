@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Visualizer from '../components/Visualizer';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Home = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
@@ -59,7 +61,7 @@ const Home = () => {
         if (isConnected) disconnect();
 
         try {
-            const res = await fetch(`http://localhost:8000/api/history/${sessionId}`, {
+            const res = await fetch(`${API_URL}/api/history/${sessionId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -97,7 +99,10 @@ const Home = () => {
 
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
 
-            const wsUrl = `ws://localhost:8000/ws/live?token=${encodeURIComponent(token)}`;
+            // Convert HTTP to WS protocol
+            const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
+            const wsHost = API_URL.replace(/^https?:\/\//, '');
+            const wsUrl = `${wsProtocol}://${wsHost}/ws/live?token=${encodeURIComponent(token)}`;
             socketRef.current = new WebSocket(wsUrl);
 
             socketRef.current.onopen = () => {

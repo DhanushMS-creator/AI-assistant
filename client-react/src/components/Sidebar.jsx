@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const Sidebar = ({ onNewChat, onLoadSession }) => {
     const [sessions, setSessions] = useState([]);
 
@@ -10,7 +12,7 @@ const Sidebar = ({ onNewChat, onLoadSession }) => {
     const loadHistory = async () => {
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch('http://localhost:8000/api/history', {
+            const res = await fetch(`${API_URL}/api/history`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
