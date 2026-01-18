@@ -5,10 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from .calendar_handler import calendar_handler
-
 class ModelHandler:
     def __init__(self):
+        # Using GEMINI_API_KEY from .env but mapped to api_key argument
+        # The user snippet used vertexai=True, we will keep it but it might need project/location if not implicit.
+        # If vertexai=True fails with just API key, we might need to set it to False or ensure env vars are right.
+        # For 'gemini-3-pro-preview', it usually requires Vertex AI or the specific preview API.
+        # Let's try with http_options or just api_key as requested.
+        
         self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_CLOUD_API_KEY")
         self.client = genai.Client(
             vertexai=True,
@@ -16,164 +20,85 @@ class ModelHandler:
         )
         self.model_name = "gemini-2.0-flash-exp"
         
-        # Define Tools
-        # NOTE: In a real app, 'user' object must be passed to tools. 
-        # Since 'generate_response' doesn't have 'user' yet, we need to update it.
-        # For now, we define the tool definitions. Actual execution logic needs to handle context.
-        
+        # Tools and Config configuration
         self.tools = [
             types.Tool(google_search=types.GoogleSearch()),
-            # We define functions that the model can call. 
-            # Ideally, we should register the python functions directly if using the high-level SDK 
-            # that supports automatic execution.
-            # But here we are using `genai.Client` manually.
-            # For simplicity, we will instruct the model about tools in the system prompt for now
-            # OR register them if the SDK supports `function_declarations`.
-            
-            # Let's try to register the python functions directly as tools:
-            types.Tool(function_declarations=[
-                types.FunctionDeclaration(
-                    name="get_calendar_events",
-                    description="Get upcoming events from the user's Google Calendar.",
-                ),
-                types.FunctionDeclaration(
-                    name="schedule_event",
-                    description="Schedule a new event on Google Calendar.",
-                    parameters=types.Schema(
-                        type="OBJECT",
-                        properties={
-                            "summary": types.Schema(type="STRING", description="Title of the event"),
-                            "start_time": types.Schema(type="STRING", description="Start time in ISO format (e.g. 2024-01-01T10:00:00)"),
-                        },
-                        required=["summary", "start_time"]
-                    )
-                )
-            ])
         ]
         
         self.config = types.GenerateContentConfig(
-            temperature=0.7, # Lower temp for tool use
+            temperature=1,
             top_p=0.95,
             max_output_tokens=8192,
+            safety_settings=[
+                types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+            ],
             tools=self.tools,
+            thinking_config=types.ThinkingConfig(
+                thinking_level="HIGH",
+            ),
             system_instruction=types.Content(
                 parts=[types.Part(
-                    text="You are Nova, a personal AI voice assistant with access to Google Calendar. "
-                         "Capabilities: "
-                         "1. You can search the web for real-time info. "
-                         "2. You can check the user's calendar and schedule events. "
-                         "3. If asked to schedule, ALWAYS ask for confirmation of time before calling the tool if ambiguous. "
-                         "4. Be concise and friendly. Spoken conversation style."
+                    text="You are a personal voice assistant. Your response will be spoken out loud. "
+                         "1. Respond in a friendly, natural, and conversational manner. "
+                         "2. DO NOT use any special characters or formatting like asterisks (**), hashes (#), or bullets (-). "
+                         "3. formatting like bold or italics is strictly forbidden as it cannot be spoken. "
+                         "4. Keep answers concise and direct. "
+                         "5. If you need to list things, just speak them naturally in a sentence."
                 )]
             ),
         )
 
+        # Basic history management (simplified for this demo)
         self.history = []
 
-    # Updated signature to accept 'user' object
-    async def generate_response(self, user_input: str, user=None) -> str:
+    async def generate_response(self, user_input: str) -> str:
         try:
-            # Personalization Context
-            import datetime
-            now = datetime.datetime.now().strftime("%A, %d %B %Y, %I:%M %p")
-            user_name = user.name if user else "User"
-            
-            # Create a dynamic prompt with user context
-            # We copy the base tools but update the system instruction
-            dynamic_instruction = (
-                f"You are Nova, a personal AI voice assistant for {user_name}. "
-                f"The current time is {now}. "
-                "Capabilities: "
-                "1. You can search the web for real-time info. "
-                "2. You can check the user's calendar and schedule events. "
-                "3. If asked to schedule, ALWAYS ask for confirmation of time before calling the tool if ambiguous. "
-                "4. Be concise and friendly. Spoken conversation style."
-            )
-
             # Construct content with history
             contents = []
             for msg in self.history:
                 contents.append(types.Content(role=msg["role"], parts=[types.Part(text=msg["text"])]))
             
+            # Add current user message
             contents.append(types.Content(role="user", parts=[types.Part(text=user_input)]))
+
+            # Generate via streaming but accumulate for return
+            full_response = ""
+            # Note: client.models.generate_content_stream is synchronous in the snippet? 
+            # The SDK might have an async version or we run it in a thread if it blocks too much.
+            # Checking SDK docs: usually has async_generate_content. 
+            # But the user snippet used: for chunk in client.models.generate_content_stream...
+            # We will try to use the synchronous stream for now, wrapped or just directly if fast enough.
+            # Ideally we should use `await client.aio.models.generate_content_stream` if available for async.
+            # Assuming standard usage first.
             
-            # Temporary config override for this request
-            request_config = types.GenerateContentConfig(
-                temperature=0.7,
-                top_p=0.95,
-                max_output_tokens=8192,
-                tools=self.tools,
-                system_instruction=types.Content(
-                    parts=[types.Part(text=dynamic_instruction)]
-                ),
-            )
+            # Use 'aio' client if available for async, or just standard client.
+            # The new SDK has an .aio accessor? Or we use `genai.Client` vs `genai.AsyncClient`?
+            # The snippet used `genai.Client`. Let's stick to valid async if possible or blocking for now.
+            # Actually, let's wrap it for safety or checking if `generate_content` is enough.
             
-            # 1. Generate content
-            response = self.client.models.generate_content(
+            # Let's just use the snippet pattern but accumulate.
+            
+            response_stream = self.client.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
-                config=request_config
+                config=self.config
             )
-            
-            final_text = ""
 
-            # 2. Check for Function Calls
-            if response.candidates and response.candidates[0].content.parts:
-                for part in response.candidates[0].content.parts:
-                    if part.function_call:
-                        fn = part.function_call
-                        print(f"Function Call Detected: {fn.name}")
-                        
-                        tool_result = "Tool execution failed."
-                        
-                        if user:
-                            if fn.name == "get_calendar_events":
-                                tool_result = calendar_handler.list_events(user)
-                            elif fn.name == "schedule_event":
-                                args = fn.args
-                                tool_result = calendar_handler.create_event(user, args.get('summary'), args.get('start_time'))
-                        else:
-                            tool_result = "Error: User context missing for calendar operation."
-
-                        print(f"Tool Result: {tool_result}")
-
-                        # 3. Send Tool Output back to model to get final spoken response
-                        # We need to construct the function response part
-                        
-                        # Add the model's function call to history (ephemeral for this turn)
-                        contents.append(response.candidates[0].content)
-                        
-                        # Add the function response
-                        contents.append(types.Content(
-                            parts=[types.Part(
-                                function_response=types.FunctionResponse(
-                                    name=fn.name,
-                                    response={"result": tool_result}
-                                )
-                            )]
-                        ))
-                        
-                        # Generate final response
-                        final_res = self.client.models.generate_content(
-                            model=self.model_name,
-                            contents=contents,
-                            config=request_config
-                        )
-                        
-                        if final_res.text:
-                            final_text = final_res.text
-                    
-                    elif part.text:
-                        final_text += part.text
-            
-            if not final_text:
-                final_text = "I'm not sure how to handle that."
+            for chunk in response_stream:
+                if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                     # Check if it's text
+                    for part in chunk.candidates[0].content.parts:
+                        if part.text:
+                            full_response += part.text
 
             # Update history
             self.history.append({"role": "user", "text": user_input})
-            self.history.append({"role": "model", "text": final_text})
+            self.history.append({"role": "model", "text": full_response})
             
-            return final_text
+            return full_response
 
         except Exception as e:
             print(f"Error generating response: {e}")

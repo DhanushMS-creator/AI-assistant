@@ -69,45 +69,23 @@ async def health_check():
 
 @app.post("/api/auth/google-login")
 async def google_login(request: GoogleLoginRequest, db: Session = Depends(get_db)):
-    # Try exchanging code first (New Flow)
-    google_data = None
-    
-    # If credential looks long (JWT), it's old flow. If short/opaque, it might be a code? 
-    # Actually, let's assume 'credential' field now carries the 'code' from frontend
-    # because we will change frontend to send {CodeResponse.code} as 'credential' or similar.
-    # To be safe, we try code exchange.
-    
-    if request.credential.startswith("4/"): # Auth codes usually start with 4/
-         from .auth import exchange_code_for_credentials
-         google_data = exchange_code_for_credentials(request.credential)
-    else:
-         # Fallback to old JWT verification (for existing sessions or simple login)
-         google_data = verify_google_token(request.credential)
-
+    google_data = verify_google_token(request.credential)
     if not google_data:
-        raise HTTPException(status_code=400, detail="Invalid Google Token or Code")
+        raise HTTPException(status_code=400, detail="Invalid Google Token")
     
     email = google_data.get('email')
     google_id = google_data.get('sub')
     name = google_data.get('name')
     picture = google_data.get('picture')
-    refresh_token = google_data.get('refresh_token')
 
     # Check if user exists
     user = db.query(User).filter(User.email == email).first()
     if not user:
         # Create new user
-        user = User(email=email, google_id=google_id, name=name, profile_pic=picture, refresh_token=refresh_token)
+        user = User(email=email, google_id=google_id, name=name, profile_pic=picture)
         db.add(user)
-    else:
-        # Update details if changed and SAVE REFRESH TOKEN if we got a new one
-        user.name = name
-        user.profile_pic = picture
-        if refresh_token:
-            user.refresh_token = refresh_token
-    
-    db.commit()
-    db.refresh(user)
+        db.commit()
+        db.refresh(user)
     
     # Create JWT
     access_token = create_access_token(data={"sub": user.email})
@@ -119,7 +97,7 @@ async def chat_endpoint(request: ChatRequest, current_user: User = Depends(get_c
         raise HTTPException(status_code=400, detail="Message is empty")
     
     # Generate AI Response
-    response_text = await model_handler.generate_response(request.message, user=current_user)
+    response_text = await model_handler.generate_response(request.message)
 
     # Persistence Logic
     session_id = request.session_id

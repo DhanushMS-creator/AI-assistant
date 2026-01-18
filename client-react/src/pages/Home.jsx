@@ -119,16 +119,6 @@ const Home = () => {
                     if (event.data.startsWith("Error:")) {
                         setStatus(event.data);
                         addLog("System: " + event.data);
-                    } else {
-                        try {
-                            const data = JSON.parse(event.data);
-                            if (data.text) {
-                                addLog("Nova: " + data.text);
-                            }
-                        } catch (e) {
-                            // If not JSON, ignore or log as system
-                            // addLog("System: " + event.data);
-                        }
                     }
                     return;
                 }
