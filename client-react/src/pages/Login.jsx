@@ -45,7 +45,7 @@ const Login = () => {
 
             <div style={{ marginTop: '30px' }}>
                 <div id="g_id_onload"
-                     data-client_id="85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com"
+                     data-client_id="YOUR_GOOGLE_CLIENT_ID_HERE"
                      data-callback="handleCredentialResponse"
                      data-auto_prompt="false">
                 </div>
