@@ -18,10 +18,10 @@ services:
           property: connectionString
     autoDeploy: true
 
-  # Frontend (React)
-  - type: static
-    name: web
-    env: static
+# Frontend (React)
+staticSites:
+  - name: web
+    # env: static # 'env' is implied for staticSites
     region: singapore
     plan: free
     buildCommand: |
@@ -38,7 +38,7 @@ services:
         fromService:
           type: web
           name: api
-          envVar: RenderServiceUrl # This allows frontend to talk to backend
+          envVar: RenderServiceUrl
     autoDeploy: true
 
 databases:
