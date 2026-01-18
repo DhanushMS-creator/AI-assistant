@@ -26,13 +26,44 @@ def verify_google_token(token: str):
         print(f"Token verification failed: {e}")
         return None
 
+import json
+
+# ... existing code ...
+
 def exchange_code_for_credentials(auth_code: str):
     try:
-        # Create the flow using the client secrets from environment
+        # 1. Try explicit Env Vars
+        client_id = os.getenv("GOOGLE_CLIENT_ID")
+        client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+        
+        # 2. Smart Fallback: Check GOOGLE_APPLICATION_CREDENTIALS if secret is missing
+        # (Users sometimes paste the OAuth JSON there)
+        if not client_secret:
+            gac = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            if gac:
+                try:
+                    data = None
+                    if gac.strip().startswith("{"):
+                        data = json.loads(gac)
+                    elif os.path.exists(gac):
+                        with open(gac) as f:
+                            data = json.load(f)
+                    
+                    if data:
+                        web_config = data.get("web") or data.get("installed")
+                        if web_config:
+                            if not client_secret:
+                                client_secret = web_config.get("client_secret")
+                            if not client_id: # Also fallback ID just in case
+                                client_id = web_config.get("client_id")
+                except Exception as parse_err:
+                    print(f"Failed to parse credentials fallback: {parse_err}")
+
+        # Create the flow using the client secrets
         client_config = {
             "web": {
-                "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-                "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+                "client_id": client_id,
+                "client_secret": client_secret,
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
             }
@@ -59,7 +90,7 @@ def exchange_code_for_credentials(auth_code: str):
         id_info = id_token.verify_oauth2_token(
             credentials.id_token, 
             requests.Request(), 
-            os.getenv("GOOGLE_CLIENT_ID")
+            client_id
         )
         
         return {
