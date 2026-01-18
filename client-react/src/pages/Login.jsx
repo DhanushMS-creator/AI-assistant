@@ -11,7 +11,7 @@ const Login = () => {
     // Define the callback function globally so Google script can call it
     window.handleCredentialResponse = async (response) => {
       setError("Verifying...");
-      
+
       try {
         const res = await fetch(`${API_URL}/api/auth/google-login`, {
           method: 'POST',
@@ -24,7 +24,7 @@ const Login = () => {
         }
 
         const data = await res.json();
-        
+
         localStorage.setItem('token', data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user)); // Store user info
 
@@ -34,35 +34,57 @@ const Login = () => {
         setError("Login Failed. Please try again.");
       }
     };
+
+    // Initialize Google Button
+    const initGoogle = () => {
+      if (window.google?.accounts) {
+        window.google.accounts.id.initialize({
+          client_id: "85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com", // TODO: Update this if you have your own!
+          callback: window.handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: false
+        });
+
+        const btnParent = document.getElementById("google-login-btn");
+        if (btnParent) {
+          window.google.accounts.id.renderButton(
+            btnParent,
+            { theme: "filled_black", size: "large", shape: "pill", type: "standard" }
+          );
+        }
+      }
+    }
+
+    // Check if script is already loaded
+    if (window.google?.accounts) {
+      initGoogle();
+    } else {
+      // If not, wait for it (though index.html loads it, timing varies)
+      const checkGoogle = setInterval(() => {
+        if (window.google?.accounts) {
+          clearInterval(checkGoogle);
+          initGoogle();
+        }
+      }, 100);
+    }
   }, [navigate]);
 
   return (
     <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-       <div className="background-glow"></div>
-        <div className="assistant-interface"> 
-            <header>
-                <h1>Nova</h1>
-                <p>Login to continue</p>
-            </header>
+      <div className="background-glow"></div>
+      <div className="assistant-interface">
+        <header>
+          <h1>Nova</h1>
+          <p>Login to continue</p>
+        </header>
 
-            <div style={{ marginTop: '30px' }}>
-                <div id="g_id_onload"
-                     data-client_id="85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com"
-                     data-callback="handleCredentialResponse"
-                     data-auto_prompt="false">
-                </div>
-                <div className="g_id_signin"
-                     data-type="standard"
-                     data-size="large"
-                     data-theme="filled_black"
-                     data-text="sign_in_with"
-                     data-shape="pill"
-                     data-logo_alignment="left">
-                </div>
-            </div>
-
-            {error && <p id="error-msg" style={{ color: '#ff4444', marginTop: '15px', fontSize: '0.9em' }}>{error}</p>}
+        <div style={{ marginTop: '30px', height: '50px' }}>
+          {/* Container for the button */}
+          <div id="google-login-btn"></div>
         </div>
+
+        {error && <p id="error-msg" style={{ color: '#ff4444', marginTop: '15px', fontSize: '0.9em' }}>{error}</p>}
+      </div>
     </div>
   );
 };
