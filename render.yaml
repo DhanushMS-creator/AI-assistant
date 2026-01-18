@@ -21,7 +21,6 @@ services:
     name: web
     runtime: static
     # region: singapore # Static sites are global, no region allowed
-    plan: free
     buildCommand: |
       cd client-react
       npm install
