@@ -11,3 +11,5 @@ sqlalchemy
 python-jose[cryptography]
 google-auth
 websockets
+psycopg2-binary
+gunicorn
