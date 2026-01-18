@@ -27,6 +27,7 @@ def verify_google_token(token: str):
         return None
 
 import json
+import ast
 
 # ... existing code ...
 
@@ -37,16 +38,26 @@ def exchange_code_for_credentials(auth_code: str):
         client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
         
         # 2. Smart Fallback: Check GOOGLE_APPLICATION_CREDENTIALS if secret is missing
-        # (Users sometimes paste the OAuth JSON there)
         if not client_secret:
             gac = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
             if gac:
                 try:
                     data = None
-                    if gac.strip().startswith("{"):
-                        data = json.loads(gac)
-                    elif os.path.exists(gac):
-                        with open(gac) as f:
+                    gac_stripped = gac.strip()
+                    # Try parsing as standard JSON
+                    try:
+                        if gac_stripped.startswith("{"):
+                            data = json.loads(gac_stripped)
+                    except json.JSONDecodeError:
+                        # Fallback: Try parsing as Python dictionary (single quotes)
+                        try:
+                            # Safe evaluation of literals
+                            data = ast.literal_eval(gac_stripped)
+                        except:
+                            pass
+                            
+                    if not data and os.path.exists(gac):
+                         with open(gac) as f:
                             data = json.load(f)
                     
                     if data:
@@ -54,8 +65,10 @@ def exchange_code_for_credentials(auth_code: str):
                         if web_config:
                             if not client_secret:
                                 client_secret = web_config.get("client_secret")
-                            if not client_id: # Also fallback ID just in case
+                            if not client_id: 
                                 client_id = web_config.get("client_id")
+                                
+                    print(f"Credentials loaded. Client ID found: {bool(client_id)}, Secret found: {bool(client_secret)}")
                 except Exception as parse_err:
                     print(f"Failed to parse credentials fallback: {parse_err}")
 
