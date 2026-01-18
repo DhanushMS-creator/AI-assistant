@@ -11,6 +11,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     name = Column(String)
     profile_pic = Column(String, nullable=True)
+    refresh_token = Column(String, nullable=True)
 
     sessions = relationship("Session", back_populates="user")
 

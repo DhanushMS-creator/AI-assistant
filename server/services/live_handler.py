@@ -24,7 +24,7 @@ class LiveHandler:
             http_options={"api_version": "v1alpha"}
         )
         self.model_name = "gemini-2.0-flash-exp"
-        self.config = {"response_modalities": ["AUDIO"]}
+        self.config = {"response_modalities": ["AUDIO", "TEXT"]}
 
     async def start_session(self, websocket, user=None, db=None):
         """
@@ -46,7 +46,7 @@ class LiveHandler:
                 print("Connected to Gemini Live")
                 
                 client_task = asyncio.create_task(self.receive_from_client(websocket, session))
-                model_task = asyncio.create_task(self.send_to_client(websocket, session))
+                model_task = asyncio.create_task(self.send_to_client(websocket, session, db, chat_session_id))
                 
                 await asyncio.wait(
                     [client_task, model_task],
@@ -79,7 +79,7 @@ class LiveHandler:
         except Exception as e:
             print(f"Error receiving from client: {e}")
 
-    async def send_to_client(self, websocket, session):
+    async def send_to_client(self, websocket, session, db=None, session_id=None):
         try:
             while True:
                 async for response in session.receive():
@@ -87,6 +87,18 @@ class LiveHandler:
                     if response.data:
                         # Send binary audio back
                         await websocket.send_bytes(response.data)
+                    
+                    if response.text:
+                         # Send text transcript back
+                         import json
+                         await websocket.send_text(json.dumps({"text": response.text}))
+                         
+                         # Optional: Save to DB if session_id exists
+                         if db and session_id:
+                             # We might want to aggregate this or save line by line
+                             # For now, simplistic saving (might be spammy if chunked)
+                             # Ideally we wait for end_of_turn or full response.
+                             pass
                 
         except asyncio.CancelledError:
             pass
