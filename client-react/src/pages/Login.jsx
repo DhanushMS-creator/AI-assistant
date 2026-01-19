@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com";
 
 const Login = () => {
   const [error, setError] = useState('');
@@ -39,7 +40,7 @@ const Login = () => {
     const initGoogle = () => {
       if (window.google?.accounts) {
         window.google.accounts.id.initialize({
-          client_id: "85725976781-jikri2iuo1odlqasejb7ffll9ldkvdc6.apps.googleusercontent.com", // TODO: Update this if you have your own!
+          client_id: GOOGLE_CLIENT_ID,
           callback: window.handleCredentialResponse,
           auto_select: false,
           cancel_on_tap_outside: false
